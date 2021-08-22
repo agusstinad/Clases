@@ -1,0 +1,164 @@
+import requests as req
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
+
+SERVIDOR = "pad19.com:3030/productos/10"
+USUARIO = "adimra"
+CLAVE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjMiLCJub21icmUiOiJhbHVtbm8ifQ.eC452_kHQbCP4wDVvN6nl5Vx8V6HhQP8D5EljApFXS8"
+BBDD = "adimra_introprog21"
+
+# Funciones
+def conectarMysql():
+	motorMysql = create_engine(f"mysql+pymysql://{USUARIO}:{CLAVE}@{SERVIDOR}/{BBDD}", pool_recycle=3600)
+	conn = motorMysql.connect()
+
+	if (conn):
+		return conn
+	else:
+		return False
+
+
+# Main
+if (__name__ == "__main__"):
+	resultado = conectarMysql()
+
+	if (resultado):
+		print("Conectado a la bbdd, listo para consultas")
+	else:
+		print("Error al conectar con la bbdd")
+
+
+
+#IFTTT Nexo entre APIs Sitio Web
+#https://api.telegram.org/bot1842138649:AAGlGHONtm2E0cAR1TYavfY2KPmC4fKlNCo/getUpdates
+
+
+import requests as req
+
+def main():
+    imagen = {"photo": open("bandera.png","rb")}
+    URL_TELEGRAM = "https://api.telegram.org/bot"
+    TOKEN = "1724988189:AAHFtLjLLNVhv9aNtKFxoNwlNNKBCcPQogg"
+    #ENDPOINT = "sendMessage"
+    ENDPOINT = "sendPhoto"
+    ID_CHAT = "-577125092"
+    TEXTO = "Soy yo probando desde Python"
+
+    #URL_MENSAJE = f"{URL_TELEGRAM}{TOKEN}/{ENDPOINT}?chat_id={ID_CHAT}&text={TEXTO}"
+    URL_MENSAJE = f"{URL_TELEGRAM}{TOKEN}/{ENDPOINT}?chat_id={ID_CHAT}&caption=Emocion"
+    #consulta = req.get(URL_MENSAJE)
+    consulta = req.post(URL_MENSAJE, files = imagen)
+
+    if (consulta.status_code == 200):
+        print("Mensaje enviado")
+    else:
+        print("ERROR al enviar mensaje")
+
+if (__name__=="__main__"):
+    main()
+
+
+#URL_MENSAJE = "https://api.telegram.org/bot1934154895:AAGCBmE0WiEmJUhxWwP22-XmSE0fPxMPBhw/sendMessage?chat_id=-559723042&text=Este es el texto
+#consulta = req.get(URL_MENSAJE)
+
+
+
+
+import os
+from dotenv import load_dotenv
+import requests as req
+load_dotenv()
+
+SERVIDOR = os.getenv("SERVIDOR")
+ENDPOINT_PEDIDOS = os.getenv("ENDPOINT_PEDIDOS")
+ENDPOINT_PRODUCTOS = os.getenv("ENDPOINT_PRODUCTOS")
+ENDPOINT_CONSULTA_PEDIDOS = os.getenv("ENDPOINT_CONSULTA_PEDIDOS")
+TOKEN = os.getenv ("TOKEN")
+
+def consultaProductos():
+	URL_CONSULTA_PRODUCTO = f"{SERVIDOR}/{ENDPOINT_PRODUCTOS}?{TOKEN}"
+	
+	consultaListaProductos = req.get(URL_CONSULTA_PRODUCTO)
+
+	if (consultaListaProductos.status_code == 200):
+		print("Conexión establecida")
+		resultado = consultaListaProductos.json()
+		print(resultado)
+	else:
+		print("Falso")
+
+def cargaPedidos():
+	while(True):
+		print("---------------------------------------------------------------------------)")
+		print("ABM PEDIDOS")
+		print("Presione # para concluir")
+
+		idProducto = input("Ingrese código del producto: ")
+		if (idProducto =="#"):
+			break
+		cantProducto = input ("Ingrese cantidad:")
+		
+		if (cantProducto == "#"):
+			break
+		
+		cadenaJSON = {"id": idProducto, "cantidad":cantProducto}
+
+		URL_PEDIDO = f"{SERVIDOR}/{ENDPOINT_PEDIDOS}?{TOKEN}"
+
+		pedido = req.post(URL_PEDIDO, cadenaJSON)
+
+		if (pedido.status_code == 200):
+			ordenPedido = pedido.json()
+			print (ordenPedido["mensaje"]," con N°: ",ordenPedido["codigo"])
+	
+		else:
+			print("Falso")
+
+def consultasPedidos():
+	while(True):
+		print("---------------------------------------------------------------------------)")
+		print("CONSULTA PEDIDOS")
+		print("Presione # para concluir")
+	
+		idPedido= (input("Ingrese número de pedido: "))
+		if (idPedido =="#"):
+    			break
+		URL_CONSULTA_PEDIDO = f"{SERVIDOR}/{ENDPOINT_CONSULTA_PEDIDOS}{idPedido}?{TOKEN}"
+		consultaPedidos = req.get(URL_CONSULTA_PEDIDO)
+
+		if (consultaPedidos.status_code == 200):
+			detallePedido = consultaPedidos.json()
+			#print(detallePedido)
+			print("Pedido N°: ", idPedido)
+			print("Código Producto: ",detallePedido["productos"]["id"])
+			print("Cantidad: ", detallePedido["productos"]["cantidad"])
+		else:
+			print("Falso")
+
+		idProducto = int(detallePedido["productos"]["id"])
+		cantProducto = int(detallePedido["productos"]["cantidad"])
+		
+		URL_CONSULTA_PRODUCTO = f"{SERVIDOR}/{ENDPOINT_PRODUCTOS}?{TOKEN}"
+		consultaListaProductos = req.get(URL_CONSULTA_PRODUCTO)
+
+		resultado = consultaListaProductos.json()
+
+		print(resultado)
+		producto = resultado["productos"][idProducto-1]["id"]
+		stock = resultado["productos"][idProducto-1]["stock"]
+		print("El stock del producto: ", producto, "es: ", stock)
+
+		if (stock >= cantProducto):
+    			print("El pedido se puede procesar")
+		else:
+    			print("La cantidad pedida supera el stock en el almacén")
+
+    	
+
+def main():
+	consultaProductos()
+	cargaPedidos()
+	consultasPedidos()
+
+if (__name__=="__main__"):
+    main()
